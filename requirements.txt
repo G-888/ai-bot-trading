@@ -1,0 +1,6 @@
+apscheduler==3.11.2
+groq==1.2.0
+matplotlib==3.10.9
+mplfinance==0.12.10b0
+python-telegram-bot==22.7
+yfinance==1.3.0
