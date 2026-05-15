@@ -79,71 +79,155 @@ def _next_alert_id() -> int:
 
 SYSTEM_PROMPT = (
     "You are a senior institutional gold analyst at a top-tier macro fund. "
-    "Deliver trade signals with precision and authority. "
+    "Deliver multi-timeframe trade signals with precision and authority. "
     "No disclaimers, no hedging language, no 'as an AI'. "
-    "Use professional trading terminology: momentum, confluence, liquidity, session bias, structure. "
     "Always format your response EXACTLY like this — no deviations:\n\n"
     "XAUUSD\n"
     "Price: {price}\n\n"
+    "1H Bias: Bullish / Bearish / Neutral\n"
+    "4H Trend: Bullish / Bearish / Neutral\n"
+    "Daily Momentum: Bullish / Bearish / Neutral\n\n"
+    "Alignment: [Full Bull Alignment / Bearish Bias / Conflicting Structure / etc.]\n\n"
     "Signal: BUY or SELL\n"
     "Confidence: XX%\n\n"
-    "Support: XXXX\n"
-    "Resistance: XXXX\n\n"
+    "Support: XXXX  |  Resistance: XXXX\n\n"
     "Reason:\n"
-    "Two to three tight sentences. Cover the dominant momentum, key structure level holding or breaking, "
-    "and session bias. Use terms like: bullish/bearish structure, liquidity sweep, demand zone, "
-    "supply rejection, momentum divergence, consolidation breakout. Be direct — no filler."
+    "Exactly 3 sentences. "
+    "Sentence 1: state the dominant structure and which timeframes are aligned or conflicting. "
+    "Sentence 2: describe the key momentum condition — accelerating, decelerating, diverging — and "
+    "the most critical level (demand zone, supply rejection, liquidity sweep). "
+    "Sentence 3: give the session bias and what confirms or invalidates the signal. "
+    "Use terms: structure break, liquidity grab, EMA compression, momentum divergence, "
+    "demand/supply zone, session open bias, confluence. Be institutional. No filler."
 )
+
+
+def _tf_bias(df, lookback: int, threshold: float = 0.3) -> tuple[str, float]:
+    """Return (bias_label, pct_change) for a given dataframe and lookback period."""
+    if len(df) < lookback + 1:
+        return "Neutral", 0.0
+    current = float(df["Close"].iloc[-1])
+    prev = float(df["Close"].iloc[-lookback])
+    pct = (current - prev) / prev * 100
+    if pct > threshold:
+        return "Bullish", round(pct, 2)
+    elif pct < -threshold:
+        return "Bearish", round(pct, 2)
+    return "Neutral", round(pct, 2)
+
+
+def _tf_structure(df, lookback: int) -> tuple[float, float]:
+    """Return (support, resistance) from the last `lookback` candles."""
+    recent = df.tail(lookback)
+    return round(float(recent["Low"].min()), 2), round(float(recent["High"].max()), 2)
+
+
+def _momentum_label(df, fast: int = 5, slow: int = 20) -> str:
+    """EMA crossover-based momentum: Accelerating / Decelerating / Flat."""
+    if len(df) < slow + 1:
+        return "Flat"
+    closes = df["Close"]
+    ema_fast = float(closes.ewm(span=fast, adjust=False).mean().iloc[-1])
+    ema_slow = float(closes.ewm(span=slow, adjust=False).mean().iloc[-1])
+    prev_ema_fast = float(closes.ewm(span=fast, adjust=False).mean().iloc[-2])
+    prev_ema_slow = float(closes.ewm(span=slow, adjust=False).mean().iloc[-2])
+    gap_now = ema_fast - ema_slow
+    gap_prev = prev_ema_fast - prev_ema_slow
+    if abs(gap_now) < abs(ema_slow) * 0.001:
+        return "Flat"
+    if gap_now > gap_prev:
+        return "Accelerating"
+    return "Decelerating"
 
 
 def fetch_gold_data() -> dict | None:
     try:
         ticker = yf.Ticker("GC=F")
-        hist = ticker.history(period="5d", interval="1h")
-        if hist.empty:
+
+        # ── 1H  (last 5 days — short-term bias)
+        h1 = ticker.history(period="5d", interval="1h")
+        if h1.empty:
             return None
 
-        current_price = round(float(hist["Close"].iloc[-1]), 2)
-        recent = hist.tail(24)
-        support = round(float(recent["Low"].min()), 2)
-        resistance = round(float(recent["High"].max()), 2)
+        current_price = round(float(h1["Close"].iloc[-1]), 2)
 
-        # Trend: compare current close vs close 24 candles ago
-        if len(hist) >= 25:
-            prev_price = float(hist["Close"].iloc[-25])
-            pct_change = (current_price - prev_price) / prev_price * 100
-            if pct_change > 0.3:
-                trend = "Bullish"
-            elif pct_change < -0.3:
-                trend = "Bearish"
-            else:
-                trend = "Neutral"
-        else:
-            trend = "Neutral"
-            pct_change = 0.0
+        h1_bias, h1_pct = _tf_bias(h1, lookback=6, threshold=0.15)
+        h1_support, h1_resistance = _tf_structure(h1, lookback=24)
 
-        # Volatility: (high - low) / close over last 24 candles
-        avg_range = float((recent["High"] - recent["Low"]).mean())
+        # Intra-1H volatility
+        recent_1h = h1.tail(24)
+        avg_range = float((recent_1h["High"] - recent_1h["Low"]).mean())
         vol_ratio = avg_range / current_price * 100
-        if vol_ratio > 1.0:
-            volatility = "High"
-        elif vol_ratio > 0.5:
-            volatility = "Medium"
+        volatility = "High" if vol_ratio > 1.0 else ("Medium" if vol_ratio > 0.5 else "Low")
+
+        # ── 4H  (last 30 days — intermediate trend)
+        h4 = ticker.history(period="30d", interval="4h")
+        if h4.empty:
+            h4_trend, h4_pct = "Neutral", 0.0
+            h4_support, h4_resistance = h1_support, h1_resistance
+            h4_momentum = "Flat"
         else:
-            volatility = "Low"
+            h4_trend, h4_pct = _tf_bias(h4, lookback=10, threshold=0.3)
+            h4_support, h4_resistance = _tf_structure(h4, lookback=30)
+            h4_momentum = _momentum_label(h4)
+
+        # ── Daily  (last 90 days — macro momentum)
+        d1 = ticker.history(period="90d", interval="1d")
+        if d1.empty:
+            d1_momentum, d1_pct = "Neutral", 0.0
+            d1_support, d1_resistance = h1_support, h1_resistance
+            d1_ema_state = "Flat"
+        else:
+            d1_momentum, d1_pct = _tf_bias(d1, lookback=14, threshold=0.5)
+            d1_support, d1_resistance = _tf_structure(d1, lookback=20)
+            d1_ema_state = _momentum_label(d1, fast=9, slow=21)
+
+        # Alignment check
+        biases = [h1_bias, h4_trend, d1_momentum]
+        bull_count = biases.count("Bullish")
+        bear_count = biases.count("Bearish")
+        if bull_count == 3:
+            alignment = "Full Bull Alignment"
+        elif bear_count == 3:
+            alignment = "Full Bear Alignment"
+        elif bull_count == 2:
+            alignment = "Bullish Bias (partial)"
+        elif bear_count == 2:
+            alignment = "Bearish Bias (partial)"
+        else:
+            alignment = "Conflicting Structure"
 
         return {
             "price": current_price,
-            "support": support,
-            "resistance": resistance,
-            "trend": trend,
-            "pct_change": round(pct_change, 2),
             "volatility": volatility,
-            "closes": hist["Close"].tail(24).tolist(),
-            "highs": hist["High"].tail(24).tolist(),
-            "lows": hist["Low"].tail(24).tolist(),
-            "volumes": hist["Volume"].tail(24).tolist(),
-            "df": hist,
+            "alignment": alignment,
+            # 1H
+            "h1_bias": h1_bias,
+            "h1_pct": h1_pct,
+            "h1_support": h1_support,
+            "h1_resistance": h1_resistance,
+            # 4H
+            "h4_trend": h4_trend,
+            "h4_pct": h4_pct,
+            "h4_support": h4_support,
+            "h4_resistance": h4_resistance,
+            "h4_momentum": h4_momentum,
+            # Daily
+            "d1_momentum": d1_momentum,
+            "d1_pct": d1_pct,
+            "d1_support": d1_support,
+            "d1_resistance": d1_resistance,
+            "d1_ema_state": d1_ema_state,
+            # Legacy keys kept for chart/summary/alerts compatibility
+            "support": h1_support,
+            "resistance": h1_resistance,
+            "trend": h4_trend,
+            "pct_change": h4_pct,
+            "closes": h1["Close"].tail(24).tolist(),
+            "highs": h1["High"].tail(24).tolist(),
+            "lows": h1["Low"].tail(24).tolist(),
+            "volumes": h1["Volume"].tail(24).tolist(),
+            "df": h1,
         }
     except Exception as e:
         logger.error("Failed to fetch gold data: %s", e)
@@ -434,14 +518,23 @@ async def analyze_gold(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         return
 
     prompt = (
-        f"Current XAUUSD price: {data['price']}\n"
-        f"Recent 24h closes: {data['closes']}\n"
-        f"Recent 24h highs: {data['highs']}\n"
-        f"Recent 24h lows: {data['lows']}\n"
-        f"Recent 24h volumes: {data['volumes']}\n"
-        f"Calculated support: {data['support']}\n"
-        f"Calculated resistance: {data['resistance']}\n\n"
-        "Analyze this data and provide a trading signal in the exact format specified."
+        f"Price: {data['price']}\n\n"
+        f"── 1H (Short-Term Bias) ──\n"
+        f"Bias: {data['h1_bias']} ({data['h1_pct']:+.2f}% over 6 bars)\n"
+        f"Support: {data['h1_support']}  Resistance: {data['h1_resistance']}\n"
+        f"Recent closes: {[round(c,2) for c in data['closes'][-8:]]}\n\n"
+        f"── 4H (Intermediate Trend) ──\n"
+        f"Trend: {data['h4_trend']} ({data['h4_pct']:+.2f}% over 10 bars)\n"
+        f"Momentum: {data['h4_momentum']}\n"
+        f"Support: {data['h4_support']}  Resistance: {data['h4_resistance']}\n\n"
+        f"── Daily (Macro Momentum) ──\n"
+        f"Momentum: {data['d1_momentum']} ({data['d1_pct']:+.2f}% over 14 days)\n"
+        f"EMA state: {data['d1_ema_state']}\n"
+        f"Support: {data['d1_support']}  Resistance: {data['d1_resistance']}\n\n"
+        f"── Structure ──\n"
+        f"Alignment: {data['alignment']}\n"
+        f"Volatility: {data['volatility']}\n\n"
+        "Deliver the multi-timeframe signal in the exact format specified."
     )
 
     try:
