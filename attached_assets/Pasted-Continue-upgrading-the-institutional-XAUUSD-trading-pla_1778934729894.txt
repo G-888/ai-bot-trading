@@ -1,0 +1,396 @@
+Continue upgrading the institutional XAUUSD trading platform.
+
+Do NOT modify trading engines.
+Do NOT break existing commands.
+Focus on:
+1. UI/UX overhaul
+2. README/documentation overhaul
+3. Deployment documentation
+4. Operations documentation
+5. GitHub repository polish
+
+====================================================
+PHASE 1 — TELEGRAM UI OVERHAUL
+====================================================
+
+Transform the Telegram bot into an institutional mobile trading terminal.
+
+====================================================
+NEW MAIN MENU STRUCTURE
+====================================================
+
+Replace current flat menu with 4 grouped sections:
+
+📈 Trading
+🧠 Analytics
+📚 Research
+⚙️ System
+
+====================================================
+📈 TRADING
+====================================================
+
+Submenu buttons:
+- Analyze
+- Chart
+- Fibonacci
+- Smart Money
+- Sessions
+- Confluence
+- Voting
+- Live Price
+
+====================================================
+🧠 ANALYTICS
+====================================================
+
+Submenu buttons:
+- Backtest
+- Performance
+- Diagnostics
+- Heatmap
+- Decay
+- Leaderboard
+- Optimization
+- Session Analytics
+
+====================================================
+📚 RESEARCH
+====================================================
+
+Submenu buttons:
+- Regime Analysis
+- Edge Health
+- Stability Reports
+- Strategy Comparison
+- Weekly Report
+- Historical Studies
+
+====================================================
+⚙️ SYSTEM
+====================================================
+
+Submenu buttons:
+- Alerts
+- Daily Summary
+- AI Mode
+- Settings
+- Refresh
+- Help
+
+====================================================
+NAVIGATION
+====================================================
+
+Every screen must include:
+- 🏠 Home
+- 🔙 Back
+- 🔄 Refresh
+
+====================================================
+BREADCRUMB HEADERS
+====================================================
+
+Example:
+📈 Trading → 🏦 Smart Money → 1H
+
+====================================================
+UI STYLE
+====================================================
+
+Target:
+- Bloomberg Terminal
+- TradingView Pro
+- Institutional quant dashboard
+
+Use:
+- monospace panels
+- aligned metric blocks
+- compact layouts
+- clean spacing
+- professional icons
+- dark-theme chart consistency
+
+====================================================
+MESSAGE CARD FORMAT
+====================================================
+
+Use formatted blocks like:
+
+┌────────────────────┐
+│ SMC ENGINE         │
+├────────────────────┤
+│ Signal: BUY        │
+│ Confidence: 78%    │
+│ PF: 1.84           │
+│ DD: -4.2%          │
+└────────────────────┘
+
+====================================================
+STATEFUL USER FLOWS
+====================================================
+
+Users should be able to use the bot entirely via buttons.
+
+Example:
+Backtest →
+Select Strategy →
+Select Timeframe →
+Select Range →
+Generate Result
+
+No slash commands required.
+
+====================================================
+ADAPTIVE UI
+====================================================
+
+Menus adapt based on:
+- session
+- volatility
+- active alerts
+- user preferences
+
+====================================================
+PHASE 2 — README OVERHAUL
+====================================================
+
+Rewrite README.md completely.
+
+Create a professional institutional-grade README.
+
+====================================================
+README STRUCTURE
+====================================================
+
+# Project Overview
+Explain:
+- institutional XAUUSD AI framework
+- Telegram-based trading terminal
+- quantitative research system
+- self-evaluating analytics engine
+
+====================================================
+FEATURES SECTION
+====================================================
+
+Document ALL features in detail:
+
+Trading:
+- live price
+- charting
+- SMC
+- Fibonacci
+- Confluence
+- voting engine
+- session analysis
+
+Analytics:
+- backtesting
+- diagnostics
+- optimization
+- performance
+- decay monitoring
+- heatmaps
+- leaderboards
+
+Research:
+- regime analysis
+- edge health
+- session analytics
+- historical studies
+
+AI:
+- Groq integration
+- AI personas
+- caching
+- retry system
+
+====================================================
+ARCHITECTURE SECTION
+====================================================
+
+Document folder structure:
+
+market/
+strategies/
+signals/
+analytics/
+charts/
+storage/
+bot/
+ai/
+
+Explain each module clearly.
+
+====================================================
+DEPLOYMENT GUIDE
+====================================================
+
+Create COMPLETE deployment instructions for:
+
+1. Replit
+2. Local Windows
+3. Local Linux
+4. VPS Ubuntu
+5. Docker
+
+====================================================
+REPLIT DEPLOYMENT
+====================================================
+
+Step-by-step:
+- import repo
+- add secrets
+- install dependencies
+- run workflow
+- background jobs
+- persistent deployment
+
+====================================================
+LOCAL WINDOWS DEPLOYMENT
+====================================================
+
+Step-by-step:
+- install Python
+- create venv
+- install requirements
+- configure .env
+- run bot
+
+====================================================
+UBUNTU VPS DEPLOYMENT
+====================================================
+
+Full production guide:
+- apt install
+- venv
+- systemd service
+- auto restart
+- logs
+- persistence
+- tmux option
+
+====================================================
+DOCKER DEPLOYMENT
+====================================================
+
+Create:
+- Dockerfile
+- docker-compose.yml
+
+README must explain:
+- build
+- run
+- restart
+- volumes
+- environment variables
+
+====================================================
+ENVIRONMENT VARIABLES
+====================================================
+
+Document:
+- TELEGRAM_BOT_TOKEN
+- GROQ_API_KEY
+
+Explain where to get them.
+
+====================================================
+BOT OPERATION GUIDE
+====================================================
+
+Explain:
+- all menus
+- all buttons
+- all commands
+- all workflows
+
+====================================================
+BACKTESTING GUIDE
+====================================================
+
+Explain:
+- how backtests work
+- no lookahead bias
+- metrics meaning
+- interpreting results
+
+====================================================
+ANALYTICS GUIDE
+====================================================
+
+Explain:
+- PF
+- expectancy
+- drawdown
+- Sharpe
+- edge health
+- decay
+- robustness
+- stability
+
+====================================================
+SCREENSHOTS SECTION
+====================================================
+
+Add placeholders for:
+- main menu
+- heatmap
+- backtesting
+- performance dashboard
+- session analytics
+
+====================================================
+TROUBLESHOOTING
+====================================================
+
+Document:
+- Telegram connection failures
+- API failures
+- yfinance issues
+- SQLite locking
+- deployment issues
+- Replit sleep mode
+- chart generation failures
+
+====================================================
+SECURITY SECTION
+====================================================
+
+Explain:
+- keeping repo private
+- protecting API keys
+- using environment variables
+- avoiding token leaks
+
+====================================================
+LICENSE + DISCLAIMER
+====================================================
+
+Add proper:
+- educational-use disclaimer
+- non-financial-advice disclaimer
+- MIT license template
+
+====================================================
+GITHUB POLISH
+====================================================
+
+Add:
+- .gitignore cleanup
+- requirements cleanup
+- better project descriptions
+- badges
+- versioning
+- changelog
+- roadmap section
+
+====================================================
+FINAL OBJECTIVE
+====================================================
+
+Transform the project into:
+a professional open-source institutional XAUUSD AI research and execution framework
+with production-grade UI, deployment documentation, operational documentation,
+and institutional-quality repository presentation.

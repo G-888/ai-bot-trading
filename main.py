@@ -58,6 +58,7 @@ from bot.handlers.decay_commands import (
     cmd_monitor,
     cmd_stability,
 )
+from bot.handlers.session_commands import cmd_session
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -110,6 +111,7 @@ def main() -> None:
     app.add_handler(CommandHandler("regimehealth",    cmd_regimehealth))
     app.add_handler(CommandHandler("monitor",         cmd_monitor))
     app.add_handler(CommandHandler("stability",       cmd_stability))
+    app.add_handler(CommandHandler("session",         cmd_session))
 
     app.add_handler(CallbackQueryHandler(button_callback))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
