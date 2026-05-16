@@ -44,6 +44,13 @@ from bot.handlers.institutional_commands import (
     cmd_backtest,
     cmd_debugmulti,
 )
+from bot.handlers.analytics_commands import (
+    cmd_performance,
+    cmd_leaderboard,
+    cmd_diagnostics,
+    cmd_compare,
+    cmd_optimize,
+)
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -84,6 +91,12 @@ def main() -> None:
     app.add_handler(CommandHandler("heatmap",         cmd_heatmap))
     app.add_handler(CommandHandler("backtest",        cmd_backtest))
     app.add_handler(CommandHandler("debugmulti",      cmd_debugmulti))
+
+    app.add_handler(CommandHandler("performance",     cmd_performance))
+    app.add_handler(CommandHandler("leaderboard",     cmd_leaderboard))
+    app.add_handler(CommandHandler("diagnostics",     cmd_diagnostics))
+    app.add_handler(CommandHandler("compare",         cmd_compare))
+    app.add_handler(CommandHandler("optimize",        cmd_optimize))
 
     app.add_handler(CallbackQueryHandler(button_callback))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))

@@ -1,0 +1,205 @@
+Continue building the institutional XAUUSD framework.
+
+Do NOT overwrite existing systems.
+
+====================================================
+NEW MODULE — PERFORMANCE ANALYTICS
+====================================================
+
+Create:
+
+analytics/
+    performance.py
+    leaderboard.py
+    diagnostics.py
+
+====================================================
+GOAL
+====================================================
+
+Build a persistent strategy analytics system that compares:
+- Fibonacci
+- Smart Money Concepts
+- Confluence
+- Momentum
+- Session
+- Voting Engine
+
+using REAL historical backtest data stored in SQLite.
+
+====================================================
+NEW COMMANDS
+====================================================
+
+/performance
+/leaderboard
+/diagnostics
+/compare fib smc
+/optimize
+
+====================================================
+/PERFORMANCE
+====================================================
+
+Pull historical results from:
+- backtest_runs
+- backtest_trades
+- signal_history
+
+Return:
+
+Institutional Performance Report
+
+For each strategy:
+- total trades
+- win rate
+- avg RR
+- max drawdown
+- expectancy
+- profit factor
+- average confidence
+- volatility-adjusted score
+- trending market performance
+- ranging market performance
+
+====================================================
+LEADERBOARD ENGINE
+====================================================
+
+Rank strategies by:
+- consistency
+- expectancy
+- drawdown control
+- regime adaptability
+- signal quality
+
+Generate:
+
+🏆 Strategy Leaderboard
+
+1. SMC Engine
+2. Voting Engine
+3. Fibonacci
+4. Momentum
+
+Include:
+- score
+- edge rating
+- stability rating
+- confidence reliability
+
+====================================================
+DIAGNOSTICS ENGINE
+====================================================
+
+Detect:
+- overfitting
+- low sample size
+- unstable confidence
+- regime dependency
+- weak RR profile
+- excessive drawdown
+- conflicting timeframe behaviour
+
+====================================================
+/COMPARE COMMAND
+====================================================
+
+Example:
+/compare fib smc
+
+Generate side-by-side comparison:
+- win rate
+- RR
+- drawdown
+- confidence
+- regime performance
+- best timeframe
+- recent 30-day performance
+
+====================================================
+OPTIMIZATION ENGINE
+====================================================
+
+Create:
+
+analytics/optimizer.py
+
+Goal:
+Automatically test parameter variations.
+
+Examples:
+- RSI periods
+- Fib anchor sensitivity
+- BOS confirmation thresholds
+- Session weighting
+- Volatility filters
+
+====================================================
+OPTIMIZER OUTPUT
+====================================================
+
+Generate:
+- best-performing parameter sets
+- worst-performing parameter sets
+- robustness score
+- stability score
+- overfit warning
+
+====================================================
+ADVANCED ANALYTICS
+====================================================
+
+Add:
+- rolling 30-day performance
+- rolling 90-day performance
+- strategy decay detection
+- regime transition analysis
+- signal quality trend
+
+====================================================
+VISUAL OUTPUTS
+====================================================
+
+Generate Telegram-ready charts:
+- equity curves
+- drawdown curves
+- rolling win rate
+- monthly performance heatmap
+- strategy comparison bars
+
+Dark institutional theme only.
+
+====================================================
+DATABASE EXTENSIONS
+====================================================
+
+Add tables:
+- optimization_runs
+- performance_snapshots
+- regime_statistics
+
+====================================================
+IMPORTANT ENGINEERING RULES
+====================================================
+
+- Preserve all existing commands
+- Preserve all menus
+- Preserve all strategy engines
+- Python calculates ALL metrics
+- AI only explains outputs
+- No mocked data
+- SQLite persistence required
+- Mobile-first Telegram formatting
+- Optimized for Replit resource limits
+
+====================================================
+FINAL OBJECTIVE
+====================================================
+
+Transform the project from:
+“signal bot”
+
+into:
+
+“self-evaluating institutional research and validation platform.”

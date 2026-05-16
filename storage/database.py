@@ -107,6 +107,43 @@ def init_db() -> None:
             entry_price     REAL,
             recorded_at     TEXT DEFAULT CURRENT_TIMESTAMP
         );
+
+        CREATE TABLE IF NOT EXISTS optimization_runs (
+            id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+            strategy            TEXT NOT NULL,
+            timeframe           TEXT NOT NULL,
+            lookback            TEXT NOT NULL,
+            total_combos        INTEGER DEFAULT 0,
+            viable_combos       INTEGER DEFAULT 0,
+            best_params         TEXT,
+            best_score          REAL DEFAULT 0,
+            robustness_score    REAL DEFAULT 0,
+            stability_score     REAL DEFAULT 0,
+            overfit_warning     TEXT,
+            ran_at              TEXT DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS performance_snapshots (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            strategy        TEXT NOT NULL,
+            snapshot_date   TEXT NOT NULL,
+            win_rate        REAL DEFAULT 0,
+            profit_factor   REAL DEFAULT 0,
+            expectancy      REAL DEFAULT 0,
+            total_trades    INTEGER DEFAULT 0,
+            vol_adj_score   REAL DEFAULT 0,
+            recorded_at     TEXT DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS regime_statistics (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            strategy        TEXT NOT NULL,
+            regime          TEXT NOT NULL,
+            trades          INTEGER DEFAULT 0,
+            win_rate        REAL DEFAULT 0,
+            total_pnl       REAL DEFAULT 0,
+            updated_at      TEXT DEFAULT CURRENT_TIMESTAMP
+        );
         """)
     _migrate_from_json()
     logger.info("Database initialised at %s", DB_PATH)
@@ -331,3 +368,99 @@ def save_signal_history(
                VALUES (?,?,?,?,?,?,?)""",
             (strategy, timeframe, direction, confidence, regime, session, entry_price),
         )
+
+
+# ── Optimization runs ───────────────────────────────────────────────────────────
+
+def save_optimization_run(
+    strategy: str, timeframe: str, lookback: str,
+    total_combos: int, viable_combos: int,
+    best_params: str, best_score: float,
+    robustness_score: float, stability_score: float,
+    overfit_warning: str = "",
+) -> int:
+    with _lock, _conn() as c:
+        cur = c.execute(
+            """INSERT INTO optimization_runs
+               (strategy, timeframe, lookback, total_combos, viable_combos,
+                best_params, best_score, robustness_score, stability_score, overfit_warning)
+               VALUES (?,?,?,?,?,?,?,?,?,?)""",
+            (strategy, timeframe, lookback, total_combos, viable_combos,
+             best_params, best_score, robustness_score, stability_score, overfit_warning),
+        )
+        return cur.lastrowid
+
+
+def get_optimization_runs(strategy: str | None = None, limit: int = 10) -> list[dict]:
+    with _lock, _conn() as c:
+        if strategy:
+            rows = c.execute(
+                "SELECT * FROM optimization_runs WHERE strategy=? ORDER BY id DESC LIMIT ?",
+                (strategy, limit),
+            ).fetchall()
+        else:
+            rows = c.execute(
+                "SELECT * FROM optimization_runs ORDER BY id DESC LIMIT ?", (limit,)
+            ).fetchall()
+        return [dict(r) for r in rows]
+
+
+# ── Performance snapshots ───────────────────────────────────────────────────────
+
+def save_performance_snapshot(
+    strategy: str, win_rate: float, profit_factor: float,
+    expectancy: float, total_trades: int, vol_adj_score: float,
+) -> None:
+    from datetime import datetime, timezone
+    snapshot_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    with _lock, _conn() as c:
+        c.execute(
+            """INSERT INTO performance_snapshots
+               (strategy, snapshot_date, win_rate, profit_factor,
+                expectancy, total_trades, vol_adj_score)
+               VALUES (?,?,?,?,?,?,?)""",
+            (strategy, snapshot_date, win_rate, profit_factor,
+             expectancy, total_trades, vol_adj_score),
+        )
+
+
+def get_performance_snapshots(strategy: str, limit: int = 90) -> list[dict]:
+    with _lock, _conn() as c:
+        rows = c.execute(
+            """SELECT * FROM performance_snapshots WHERE strategy=?
+               ORDER BY snapshot_date DESC LIMIT ?""",
+            (strategy, limit),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+# ── Regime statistics ───────────────────────────────────────────────────────────
+
+def upsert_regime_statistics(
+    strategy: str, regime: str,
+    trades: int, win_rate: float, total_pnl: float,
+) -> None:
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc).isoformat()
+    with _lock, _conn() as c:
+        c.execute(
+            """INSERT INTO regime_statistics
+               (strategy, regime, trades, win_rate, total_pnl, updated_at)
+               VALUES (?,?,?,?,?,?)
+               ON CONFLICT DO NOTHING""",
+            (strategy, regime, trades, win_rate, total_pnl, now),
+        )
+
+
+def get_regime_statistics(strategy: str | None = None) -> list[dict]:
+    with _lock, _conn() as c:
+        if strategy:
+            rows = c.execute(
+                "SELECT * FROM regime_statistics WHERE strategy=? ORDER BY win_rate DESC",
+                (strategy,),
+            ).fetchall()
+        else:
+            rows = c.execute(
+                "SELECT * FROM regime_statistics ORDER BY strategy, win_rate DESC"
+            ).fetchall()
+        return [dict(r) for r in rows]
