@@ -51,6 +51,13 @@ from bot.handlers.analytics_commands import (
     cmd_compare,
     cmd_optimize,
 )
+from bot.handlers.decay_commands import (
+    cmd_decay,
+    cmd_edge,
+    cmd_regimehealth,
+    cmd_monitor,
+    cmd_stability,
+)
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -98,11 +105,20 @@ def main() -> None:
     app.add_handler(CommandHandler("compare",         cmd_compare))
     app.add_handler(CommandHandler("optimize",        cmd_optimize))
 
+    app.add_handler(CommandHandler("decay",           cmd_decay))
+    app.add_handler(CommandHandler("edge",            cmd_edge))
+    app.add_handler(CommandHandler("regimehealth",    cmd_regimehealth))
+    app.add_handler(CommandHandler("monitor",         cmd_monitor))
+    app.add_handler(CommandHandler("stability",       cmd_stability))
+
     app.add_handler(CallbackQueryHandler(button_callback))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     app.job_queue.run_repeating(check_alerts,    interval=60, first=15)
     app.job_queue.run_repeating(check_summaries, interval=60, first=20)
+
+    from analytics.monitoring import register_monitoring_jobs
+    register_monitoring_jobs(app)
 
     logger.info("Gold Trading Bot starting…")
     app.run_polling(allowed_updates=Update.ALL_TYPES)

@@ -1,0 +1,209 @@
+Continue building the institutional XAUUSD research framework.
+
+Do NOT overwrite existing systems.
+
+====================================================
+NEW MODULE — STRATEGY DECAY MONITOR
+====================================================
+
+Create:
+
+analytics/
+    decay.py
+    monitoring.py
+    alerts.py
+
+====================================================
+GOAL
+====================================================
+
+Build a continuous edge deterioration detection system.
+
+The system must detect:
+- declining win rate
+- declining expectancy
+- rising drawdown
+- falling profit factor
+- regime failure
+- confidence miscalibration
+- signal saturation
+- volatility sensitivity
+
+====================================================
+NEW COMMANDS
+====================================================
+
+/decay
+/edge
+/regimehealth
+/monitor
+/stability
+
+====================================================
+DECAY ENGINE
+====================================================
+
+Pull historical data from:
+- performance_snapshots
+- backtest_runs
+- signal_history
+
+Compute rolling metrics:
+- 7d
+- 30d
+- 90d
+
+====================================================
+DETECTION LOGIC
+====================================================
+
+Detect:
+
+1. WIN RATE DECAY
+Example:
+90d = 63%
+30d = 51%
+7d = 42%
+
+2. EXPECTANCY COLLAPSE
+
+3. PROFIT FACTOR DETERIORATION
+
+4. DRAWdown EXPANSION
+
+5. REGIME FAILURE
+Example:
+SMC works in trending markets
+Fails in ranging markets
+
+6. CONFIDENCE FAILURE
+High-confidence signals underperforming low-confidence signals
+
+7. STRATEGY SATURATION
+Too many signals reducing edge quality
+
+8. VOLATILITY INSTABILITY
+Performance collapses during high ATR conditions
+
+====================================================
+DECAY SCORING
+====================================================
+
+Generate:
+
+Edge Health Score (0–100)
+
+Ratings:
+90–100 = Institutional Grade
+75–89 = Strong Edge
+60–74 = Degrading
+40–59 = Weak
+0–39 = Critical Failure
+
+====================================================
+/DECAY OUTPUT
+====================================================
+
+Example:
+
+SMC Engine — Edge Health: 68/100
+
+WARNINGS:
+- 30d expectancy dropped 42%
+- London session performance deteriorating
+- High-confidence trades underperforming baseline
+- Drawdown expansion detected
+
+Status:
+EDGE DEGRADING
+
+Recommendation:
+Reduce weighting during ranging conditions.
+Increase BOS confirmation threshold.
+
+====================================================
+REGIME HEALTH ENGINE
+====================================================
+
+Create market regime dependency analysis:
+- Trending Bull
+- Trending Bear
+- Range
+- Compression
+- Expansion
+- High Volatility
+
+Rank strategies by:
+- best regime
+- worst regime
+- stability across regimes
+
+====================================================
+MONITORING ENGINE
+====================================================
+
+Create continuous monitoring jobs.
+
+Every day:
+- snapshot performance
+- compare rolling metrics
+- update decay scores
+- save regime performance
+
+====================================================
+ALERT SYSTEM
+====================================================
+
+Telegram alerts when:
+- edge health drops below threshold
+- strategy enters critical state
+- sudden drawdown spike
+- regime mismatch detected
+
+Example:
+
+⚠️ SMC EDGE WARNING
+
+Edge Health dropped:
+82 → 61
+
+Primary cause:
+Range-bound degradation during Asia session.
+
+Recommendation:
+Reduce SMC weighting until volatility expansion returns.
+
+====================================================
+VISUAL OUTPUTS
+====================================================
+
+Generate:
+- rolling win rate curve
+- rolling expectancy curve
+- decay heatmap
+- regime performance radar chart
+- confidence calibration chart
+
+Dark institutional style only.
+
+====================================================
+IMPORTANT ENGINEERING RULES
+====================================================
+
+- Python computes ALL metrics
+- AI only explains findings
+- No mocked data
+- No lookahead bias
+- Preserve all existing commands
+- Preserve all menus
+- Preserve SQLite compatibility
+- Mobile-first Telegram formatting
+- Optimized for Replit resource limits
+
+====================================================
+FINAL OBJECTIVE
+====================================================
+
+Transform the system into:
+a self-monitoring institutional trading research platform
+capable of detecting when an edge is statistically deteriorating before capital damage occurs.
