@@ -1,0 +1,146 @@
+Update the Telegram UI menus to expose ALL institutional research features already built.
+
+Do NOT rebuild engines.
+Do NOT modify strategy logic.
+Only update:
+- keyboards
+- callback handlers
+- menu routing
+- submenu navigation
+
+====================================================
+MAIN MENU EXPANSION
+====================================================
+
+Add these new buttons to the main menu:
+
+📊 Backtest
+🧠 Performance
+🏆 Leaderboard
+🌡 Heatmap
+🗳 Votes
+🩺 Diagnostics
+
+Keep existing buttons unchanged.
+
+====================================================
+BACKTEST SUBMENU
+====================================================
+
+When user taps:
+📊 Backtest
+
+Show submenu:
+
+[ 📐 Fibonacci ]
+[ 🏦 Smart Money ]
+[ ◆ Confluence ]
+[ ⚡ Momentum ]
+[ 🕐 Session ]
+[ 🗳 Voting Engine ]
+
+Then ask:
+Select timeframe:
+
+[15m] [1H]
+[4H]  [1D]
+
+Then ask:
+Select history range:
+
+[30d] [60d] [90d]
+
+Finally run:
+Example:
+ /backtest fib 1H 30d
+
+====================================================
+PERFORMANCE MENU
+====================================================
+
+🧠 Performance
+
+Show:
+
+[ 📈 Strategy Performance ]
+[ 🏆 Leaderboard ]
+[ 🩺 Diagnostics ]
+[ ⚙️ Optimization ]
+[ 🌡 Heatmap ]
+[ 🗳 Consensus Voting ]
+
+====================================================
+QUICK ACTIONS
+====================================================
+
+Every analytics screen should include:
+
+[ 🔄 Refresh ]
+[ 🏠 Main Menu ]
+
+====================================================
+HEATMAP BUTTON
+====================================================
+
+🌡 Heatmap
+Triggers:
+/heatmap
+
+====================================================
+VOTING BUTTON
+====================================================
+
+🗳 Votes
+Triggers:
+/votes
+
+====================================================
+LEADERBOARD BUTTON
+====================================================
+
+🏆 Leaderboard
+Triggers:
+/leaderboard
+
+====================================================
+DIAGNOSTICS BUTTON
+====================================================
+
+🩺 Diagnostics
+Triggers:
+/diagnostics
+
+====================================================
+OPTIMIZATION FLOW
+====================================================
+
+⚙️ Optimization
+
+Flow:
+1. Pick strategy
+2. Pick timeframe
+3. Pick range
+
+Then run:
+Example:
+/optimize fib 1H 30d
+
+====================================================
+UI REQUIREMENTS
+====================================================
+
+- Telegram mobile optimized
+- Clean institutional layout
+- No slash commands required for normal users
+- Slash commands still work for power users
+- Add breadcrumb headers:
+Example:
+📊 Backtesting → Fibonacci → 1H → 30d
+
+====================================================
+IMPORTANT
+====================================================
+
+Do NOT remove old commands.
+Do NOT change engines.
+Only expose existing capabilities through Telegram menus and callbacks.

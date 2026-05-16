@@ -139,6 +139,86 @@ async def cmd_backtest(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         await status.edit_text(f"Backtest engine error: {e}")
 
 
+# ── Shared executors (called from callbacks too) ─────────────────────────────────
+
+async def _execute_votes(message) -> None:
+    """Shared votes executor — works from both /votes command and button callbacks."""
+    from market.data import fetch_gold_data
+    from strategies.fibonacci import run_fibonacci_analysis
+    from strategies.smc import run_smc_analysis
+    from strategies.session import analyze_session
+    from signals.confluence import calculate_confluence
+    from signals.voting import run_vote, format_vote_text
+    from bot.keyboards.menus import refresh_and_menu
+
+    data = fetch_gold_data()
+    if not data:
+        await message.reply_text("Could not fetch market data.", reply_markup=back_to_menu())
+        return
+
+    df      = data["h1_df"]
+    fib     = run_fibonacci_analysis(df)
+    smc     = run_smc_analysis(df)
+    session = analyze_session(data["h1_df"], data["h4_df"])
+    conf    = calculate_confluence(data, df, smc_result=smc, fib_result=fib, session_data=session)
+    result  = run_vote(df=df, smc_result=smc, fib_result=fib,
+                       session_data=session, confluence_result=conf)
+    text = format_vote_text(result)
+    await message.reply_text(text, reply_markup=refresh_and_menu("action_votes"))
+
+
+async def _execute_heatmap(message) -> None:
+    """Shared heatmap executor — works from both /heatmap command and button callbacks."""
+    from signals.heatmap import compute_heatmap, format_heatmap_text, generate_heatmap_chart
+    from bot.keyboards.menus import refresh_and_menu
+
+    result = compute_heatmap()
+    text   = format_heatmap_text(result)
+    chart  = generate_heatmap_chart(result)
+    await message.reply_photo(
+        photo=chart,
+        caption=text[:1024],
+        reply_markup=refresh_and_menu("action_heatmap"),
+    )
+
+
+async def _execute_backtest(message, strategy: str, timeframe: str, lookback: str,
+                             breadcrumb: str = "") -> None:
+    """Shared backtest executor — works from both /backtest command and button callbacks."""
+    from backtesting.engine import run_backtest
+    from backtesting.metrics import format_metrics_text
+    from backtesting.reports import generate_backtest_charts
+    from bot.keyboards.menus import back_to_menu, refresh_and_menu
+
+    status = await message.reply_text(
+        f"{breadcrumb}\n\nRunning backtest — fetching data…\n"
+        "This may take 20-40 seconds…"
+    )
+    try:
+        metrics, meta, error = run_backtest(strategy, timeframe, lookback)
+
+        if error:
+            await status.edit_text(f"Backtest failed: {error}")
+            return
+
+        report_text = format_metrics_text(metrics, strategy, timeframe, lookback)
+        chart_buf   = generate_backtest_charts(metrics, meta)
+        cb_key      = f"bt_run_{strategy}_{timeframe}_{lookback}"
+
+        await status.delete()
+        await message.reply_photo(
+            photo=chart_buf,
+            caption=report_text[:1024],
+            reply_markup=refresh_and_menu(cb_key),
+        )
+        if len(report_text) > 1024:
+            await message.reply_text(report_text, reply_markup=refresh_and_menu(cb_key))
+
+    except Exception as e:
+        logger.error("_execute_backtest error: %s", e, exc_info=True)
+        await status.edit_text(f"Backtest engine error: {e}")
+
+
 # ── /debugmulti ──────────────────────────────────────────────────────────────────
 
 async def cmd_debugmulti(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
