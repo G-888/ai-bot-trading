@@ -33,6 +33,11 @@ from bot.handlers.commands import (
     check_summaries,
 )
 from bot.handlers.callbacks import button_callback
+from bot.handlers.debug_commands import (
+    cmd_debugfib,
+    cmd_debugsmc,
+    cmd_debugconfluence,
+)
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -62,8 +67,12 @@ def main() -> None:
     app.add_handler(CommandHandler("alert",       cmd_alert))
     app.add_handler(CommandHandler("alerts",      cmd_alerts))
     app.add_handler(CommandHandler("clearalerts", cmd_clearalerts))
-    app.add_handler(CommandHandler("summary",     cmd_summary))
-    app.add_handler(CommandHandler("summaryoff",  cmd_summaryoff))
+    app.add_handler(CommandHandler("summary",        cmd_summary))
+    app.add_handler(CommandHandler("summaryoff",     cmd_summaryoff))
+
+    app.add_handler(CommandHandler("debugfib",       cmd_debugfib))
+    app.add_handler(CommandHandler("debugsmc",       cmd_debugsmc))
+    app.add_handler(CommandHandler("debugconfluence",cmd_debugconfluence))
 
     app.add_handler(CallbackQueryHandler(button_callback))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
