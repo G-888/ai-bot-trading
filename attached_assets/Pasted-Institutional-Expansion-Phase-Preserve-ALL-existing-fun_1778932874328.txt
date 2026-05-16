@@ -1,0 +1,338 @@
+Institutional Expansion Phase.
+
+Preserve ALL existing functionality.
+
+Do NOT overwrite existing strategy engines.
+Do NOT simplify architecture.
+Maintain modular structure.
+
+====================================================
+GOAL
+====================================================
+
+Add:
+
+1. Backtesting Engine
+2. Strategy Voting Engine
+3. Multi-Timeframe Heatmap System
+
+All calculations must remain Python-native.
+AI only explains outputs.
+
+====================================================
+PHASE 1 — BACKTESTING ENGINE
+====================================================
+
+Create:
+
+backtesting/
+    engine.py
+    metrics.py
+    replay.py
+    reports.py
+
+====================================================
+BACKTEST REQUIREMENTS
+====================================================
+
+Support testing for:
+- Fibonacci strategy
+- Smart Money Concepts strategy
+- Confluence engine
+- Session bias strategy
+
+Replay historical XAUUSD candles using yfinance data.
+
+Timeframes:
+- 15m
+- 1H
+- 4H
+- Daily
+
+====================================================
+TRADE SIMULATION
+====================================================
+
+For every signal generated:
+
+Store:
+- timestamp
+- entry
+- SL
+- TP
+- RR ratio
+- strategy source
+- confidence
+- market regime
+- session
+
+Track outcomes:
+- TP hit
+- SL hit
+- max favorable excursion
+- max adverse excursion
+- duration until exit
+- final PnL result
+
+====================================================
+PERFORMANCE METRICS
+====================================================
+
+Calculate:
+- win rate
+- loss rate
+- expectancy
+- average RR
+- max drawdown
+- profit factor
+- Sharpe-like ratio
+- average trade duration
+- strategy-specific performance
+
+====================================================
+DATABASE
+====================================================
+
+Create SQLite tables:
+
+backtest_runs
+backtest_trades
+signal_history
+
+====================================================
+COMMANDS
+====================================================
+
+Add commands:
+
+/backtest fib
+/backtest smc
+/backtest confluence
+
+Optional args:
+- timeframe
+- lookback period
+
+Examples:
+- /backtest fib 1H 30d
+- /backtest smc 4H 90d
+
+====================================================
+BACKTEST OUTPUT
+====================================================
+
+Generate:
+- clean Telegram report
+- performance table
+- equity curve chart
+- drawdown chart
+
+Charts optimized for mobile viewing.
+
+====================================================
+PHASE 2 — STRATEGY VOTING ENGINE
+====================================================
+
+Create:
+
+signals/voting.py
+
+====================================================
+VOTING ENGINE REQUIREMENTS
+====================================================
+
+Combine outputs from:
+- Fibonacci engine
+- SMC engine
+- Momentum engine
+- Session engine
+- Confluence engine
+
+Each strategy returns:
+- BUY
+- SELL
+- NEUTRAL
+
+Assign weighted scores.
+
+Example:
+- SMC = 25%
+- Fibonacci = 20%
+- Momentum = 20%
+- Session = 15%
+- Confluence = 20%
+
+====================================================
+FINAL OUTPUT
+====================================================
+
+Generate:
+
+Strategy Votes
+
+SMC         → SELL
+Fibonacci   → BUY
+Momentum    → SELL
+Session     → SELL
+Confluence  → SELL
+
+Final Bias:
+SELL
+
+Agreement:
+4 / 5 bearish
+
+Confidence:
+78%
+
+====================================================
+ADVANCED REQUIREMENTS
+====================================================
+
+Add:
+- dynamic weighting by market regime
+- stronger weighting during session overlap
+- volatility-aware weighting
+
+====================================================
+PHASE 3 — MULTI-TIMEFRAME HEATMAP
+====================================================
+
+Create:
+
+signals/heatmap.py
+
+====================================================
+TIMEFRAMES
+====================================================
+
+Analyze:
+- 15m
+- 1H
+- 4H
+- Daily
+
+====================================================
+HEATMAP MATRIX
+====================================================
+
+Generate matrix:
+
+                15m    1H    4H    D1
+
+SMC             ▲      ▲     ▼     ▼
+Fibonacci       ▲      ▲     ▼     ▼
+Momentum        ▲      ▼     ▼     ▼
+Session         →      ▼     ▼     ▼
+
+====================================================
+FEATURES
+====================================================
+
+Add:
+- alignment detection
+- conflict detection
+- strongest timeframe bias
+- weak confluence warnings
+- trend agreement score
+
+====================================================
+CHART OUTPUT
+====================================================
+
+Generate visual heatmap image:
+- institutional dark theme
+- color-coded cells
+- Telegram optimized
+- compact mobile format
+
+====================================================
+NEW COMMANDS
+====================================================
+
+/heatmap
+/debugmulti
+/votes
+
+====================================================
+DEBUGMULTI REQUIREMENTS
+====================================================
+
+Run all engines across:
+- 15m
+- 1H
+- 4H
+- Daily
+
+Expose:
+- raw strategy outputs
+- score calculations
+- alignment conflicts
+- regime conditions
+- confidence breakdowns
+
+====================================================
+MARKET REGIME DETECTION
+====================================================
+
+Create:
+
+market/regime.py
+
+Detect:
+- trending
+- ranging
+- volatile
+- compression
+- expansion
+
+This regime must dynamically influence:
+- voting weights
+- confluence score
+- signal suppression
+
+====================================================
+SIGNAL QUALITY FILTERS
+====================================================
+
+Suppress signals when:
+- timeframe conflict too high
+- volatility too low
+- structure unclear
+- confidence weak
+- regime unsuitable
+
+====================================================
+PERFORMANCE OPTIMIZATION
+====================================================
+
+Requirements:
+- async-safe
+- cache reusable calculations
+- minimize API calls
+- lightweight chart rendering
+- optimized for Replit limits
+
+====================================================
+IMPORTANT ENGINEERING RULES
+====================================================
+
+- Preserve all existing commands
+- Preserve all current UI menus
+- Preserve SQLite persistence
+- Maintain modular architecture
+- No mocked data
+- No AI-generated calculations
+- Python computes all statistics
+- AI only explains final outputs
+- Keep production-grade code quality
+
+====================================================
+FINAL GOAL
+====================================================
+
+Transform the project from:
+“AI trading assistant”
+
+into:
+“Institutional-grade XAUUSD research, validation, and execution framework.”

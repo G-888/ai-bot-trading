@@ -59,6 +59,54 @@ def init_db() -> None:
             state_data  TEXT,
             updated_at  TEXT DEFAULT CURRENT_TIMESTAMP
         );
+
+        CREATE TABLE IF NOT EXISTS backtest_runs (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            strategy        TEXT NOT NULL,
+            timeframe       TEXT NOT NULL,
+            lookback        TEXT NOT NULL,
+            total_trades    INTEGER DEFAULT 0,
+            win_rate        REAL DEFAULT 0,
+            profit_factor   REAL DEFAULT 0,
+            max_drawdown    REAL DEFAULT 0,
+            sharpe          REAL DEFAULT 0,
+            total_pnl       REAL DEFAULT 0,
+            ran_at          TEXT DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS backtest_trades (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            run_id          INTEGER NOT NULL,
+            direction       TEXT,
+            entry           REAL,
+            sl              REAL,
+            tp              REAL,
+            rr_ratio        REAL,
+            rr_actual       REAL,
+            pnl             REAL,
+            duration_bars   INTEGER,
+            exit_reason     TEXT,
+            strategy        TEXT,
+            session         TEXT,
+            regime          TEXT,
+            confidence      REAL,
+            mae             REAL,
+            mfe             REAL,
+            timestamp       TEXT,
+            FOREIGN KEY (run_id) REFERENCES backtest_runs(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS signal_history (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            strategy        TEXT NOT NULL,
+            timeframe       TEXT NOT NULL,
+            direction       TEXT NOT NULL,
+            confidence      REAL DEFAULT 0,
+            regime          TEXT,
+            session         TEXT,
+            entry_price     REAL,
+            recorded_at     TEXT DEFAULT CURRENT_TIMESTAMP
+        );
         """)
     _migrate_from_json()
     logger.info("Database initialised at %s", DB_PATH)
@@ -222,4 +270,64 @@ def set_preference(chat_id: int, key: str, value) -> None:
             f"INSERT INTO user_preferences (chat_id, {key}) VALUES (?,?) "
             f"ON CONFLICT(chat_id) DO UPDATE SET {key}=excluded.{key}",
             (chat_id, value),
+        )
+
+
+# ── Backtest persistence ────────────────────────────────────────────────────────
+
+def save_backtest_run(
+    strategy: str, timeframe: str, lookback: str,
+    total_trades: int, win_rate: float, profit_factor: float,
+    max_drawdown: float, sharpe: float, total_pnl: float,
+) -> int:
+    with _lock, _conn() as c:
+        cur = c.execute(
+            """INSERT INTO backtest_runs
+               (strategy, timeframe, lookback, total_trades, win_rate,
+                profit_factor, max_drawdown, sharpe, total_pnl)
+               VALUES (?,?,?,?,?,?,?,?,?)""",
+            (strategy, timeframe, lookback, total_trades, win_rate,
+             profit_factor, max_drawdown, sharpe, total_pnl),
+        )
+        return cur.lastrowid
+
+
+def save_backtest_trade(run_id: int, trade: dict) -> None:
+    with _lock, _conn() as c:
+        c.execute(
+            """INSERT INTO backtest_trades
+               (run_id, direction, entry, sl, tp, rr_ratio, rr_actual,
+                pnl, duration_bars, exit_reason, strategy, session,
+                regime, confidence, mae, mfe, timestamp)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (
+                run_id,
+                trade.get("direction"), trade.get("entry"), trade.get("sl"),
+                trade.get("tp"), trade.get("rr_ratio"), trade.get("rr_actual"),
+                trade.get("pnl"), trade.get("duration_bars"), trade.get("exit_reason"),
+                trade.get("strategy"), trade.get("session"), trade.get("regime"),
+                trade.get("confidence"), trade.get("mae"), trade.get("mfe"),
+                trade.get("timestamp"),
+            ),
+        )
+
+
+def get_backtest_runs(limit: int = 10) -> list[dict]:
+    with _lock, _conn() as c:
+        rows = c.execute(
+            "SELECT * FROM backtest_runs ORDER BY id DESC LIMIT ?", (limit,)
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def save_signal_history(
+    strategy: str, timeframe: str, direction: str,
+    confidence: float, regime: str, session: str, entry_price: float,
+) -> None:
+    with _lock, _conn() as c:
+        c.execute(
+            """INSERT INTO signal_history
+               (strategy, timeframe, direction, confidence, regime, session, entry_price)
+               VALUES (?,?,?,?,?,?,?)""",
+            (strategy, timeframe, direction, confidence, regime, session, entry_price),
         )

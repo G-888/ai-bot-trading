@@ -38,6 +38,12 @@ from bot.handlers.debug_commands import (
     cmd_debugsmc,
     cmd_debugconfluence,
 )
+from bot.handlers.institutional_commands import (
+    cmd_votes,
+    cmd_heatmap,
+    cmd_backtest,
+    cmd_debugmulti,
+)
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -70,9 +76,14 @@ def main() -> None:
     app.add_handler(CommandHandler("summary",        cmd_summary))
     app.add_handler(CommandHandler("summaryoff",     cmd_summaryoff))
 
-    app.add_handler(CommandHandler("debugfib",       cmd_debugfib))
-    app.add_handler(CommandHandler("debugsmc",       cmd_debugsmc))
-    app.add_handler(CommandHandler("debugconfluence",cmd_debugconfluence))
+    app.add_handler(CommandHandler("debugfib",        cmd_debugfib))
+    app.add_handler(CommandHandler("debugsmc",        cmd_debugsmc))
+    app.add_handler(CommandHandler("debugconfluence", cmd_debugconfluence))
+
+    app.add_handler(CommandHandler("votes",           cmd_votes))
+    app.add_handler(CommandHandler("heatmap",         cmd_heatmap))
+    app.add_handler(CommandHandler("backtest",        cmd_backtest))
+    app.add_handler(CommandHandler("debugmulti",      cmd_debugmulti))
 
     app.add_handler(CallbackQueryHandler(button_callback))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
