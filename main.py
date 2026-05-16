@@ -9,9 +9,10 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import mplfinance as mpf
 import yfinance as yf
-from telegram import Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder,
+    CallbackQueryHandler,
     CommandHandler,
     MessageHandler,
     ContextTypes,
@@ -488,34 +489,144 @@ def generate_chart(df, price: float, support: float, resistance: float) -> io.By
 
 # ── Command handlers ───────────────────────────────────────────────────────────
 
-async def send_chart(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text("Generating XAUUSD chart...")
-
+async def _core_chart() -> tuple[io.BytesIO | None, str | None]:
+    """Fetch data and generate chart buffer + caption. Returns (buf, caption) or (None, error_msg)."""
     data = fetch_gold_data()
     if not data:
-        await update.message.reply_text("Could not fetch chart data. Please try again later.")
-        return
-
+        return None, "Could not fetch chart data. Please try again later."
     try:
         buf = generate_chart(data["df"], data["price"], data["support"], data["resistance"])
         caption = (
             f"XAUUSD  •  48h Chart\n"
             f"Price: {data['price']}\n"
-            f"Support: {data['support']}  |  Resistance: {data['resistance']}"
+            f"1H Support: {data['h1_support']}  |  1H Resistance: {data['h1_resistance']}\n"
+            f"4H: {data['h4_trend']}  |  Daily: {data['d1_momentum']}\n"
+            f"Alignment: {data['alignment']}"
         )
-        await update.message.reply_photo(photo=buf, caption=caption)
+        return buf, caption
     except Exception as e:
         logger.error("Chart generation error: %s", e)
-        await update.message.reply_text("Failed to generate chart. Please try again.")
+        return None, "Failed to generate chart. Please try again."
 
 
-async def analyze_gold(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    await update.message.reply_text("Fetching live XAUUSD data...")
+async def send_chart(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    status = await update.message.reply_text("Generating XAUUSD chart...")
+    buf, caption = await _core_chart()
+    await status.delete()
+    if buf is None:
+        await update.message.reply_text(caption, reply_markup=_back_to_menu())
+        return
+    await update.message.reply_photo(photo=buf, caption=caption, reply_markup=_back_to_menu())
 
+
+# ── Inline keyboard helpers ─────────────────────────────────────────────────────
+
+def _back_to_menu() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([[InlineKeyboardButton("⬅️ Main Menu", callback_data="menu_main")]])
+
+
+def _build_main_menu() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("📈 Analyze Gold", callback_data="action_analyze"),
+            InlineKeyboardButton("📊 Chart",         callback_data="action_chart"),
+        ],
+        [
+            InlineKeyboardButton("💰 Live Price",    callback_data="action_price"),
+            InlineKeyboardButton("📰 Daily Summary", callback_data="menu_summary"),
+        ],
+        [
+            InlineKeyboardButton("🔔 Alerts",        callback_data="menu_alerts"),
+            InlineKeyboardButton("⚙️ Settings",      callback_data="menu_settings"),
+        ],
+        [
+            InlineKeyboardButton("❓ Help",           callback_data="action_help"),
+        ],
+    ])
+
+
+def _build_alerts_menu() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("▲ Alert Above Price", callback_data="action_alert_above"),
+            InlineKeyboardButton("▼ Alert Below Price", callback_data="action_alert_below"),
+        ],
+        [
+            InlineKeyboardButton("📋 List My Alerts",   callback_data="action_alert_list"),
+            InlineKeyboardButton("🗑 Clear All Alerts",  callback_data="action_alert_clear"),
+        ],
+        [InlineKeyboardButton("⬅️ Main Menu",            callback_data="menu_main")],
+    ])
+
+
+def _build_summary_menu(chat_id: int) -> InlineKeyboardMarkup:
+    scheduled = summary_schedules.get(chat_id)
+    schedule_btn = (
+        InlineKeyboardButton(f"✅ Scheduled: {scheduled} UTC — Change", callback_data="action_summary_times")
+        if scheduled else
+        InlineKeyboardButton("📅 Pick a Schedule Time", callback_data="action_summary_times")
+    )
+    rows = [
+        [schedule_btn],
+        [
+            InlineKeyboardButton("📰 Send Summary Now", callback_data="action_summary_now"),
+        ],
+    ]
+    if scheduled:
+        rows.append([InlineKeyboardButton("⏸ Disable Summary", callback_data="action_summary_off")])
+    rows.append([InlineKeyboardButton("⬅️ Main Menu", callback_data="menu_main")])
+    return InlineKeyboardMarkup(rows)
+
+
+def _build_summary_times_menu() -> InlineKeyboardMarkup:
+    times = ["05:00", "07:00", "08:00", "10:00", "12:00", "16:00", "18:00", "20:00"]
+    rows = [
+        [
+            InlineKeyboardButton(f"🕐 {t} UTC", callback_data=f"action_summary_set_{t}")
+            for t in times[i:i+2]
+        ]
+        for i in range(0, len(times), 2)
+    ]
+    rows.append([InlineKeyboardButton("⬅️ Back", callback_data="menu_summary")])
+    return InlineKeyboardMarkup(rows)
+
+
+def _build_settings_menu(chat_id: int) -> InlineKeyboardMarkup:
+    sched = summary_schedules.get(chat_id, "Off")
+    alert_count = len(alerts.get(chat_id, []))
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton(f"📰 Daily Summary: {sched} UTC", callback_data="menu_summary")],
+        [InlineKeyboardButton(f"🔔 Active Alerts: {alert_count}", callback_data="menu_alerts")],
+        [InlineKeyboardButton("🗑 Clear Conversation", callback_data="action_clear")],
+        [InlineKeyboardButton("⬅️ Main Menu", callback_data="menu_main")],
+    ])
+
+
+_HELP_TEXT = (
+    "XAUUSD Gold Assistant — Commands\n\n"
+    "📈 /analyze — Full AI multi-timeframe signal\n"
+    "📊 /chart — 48h dark candlestick chart\n"
+    "💰 /gold or /xauusd — Live price\n\n"
+    "🔔 Alerts\n"
+    "/alert above 3250 — Alert when price goes above\n"
+    "/alert below 3200 — Alert when price goes below\n"
+    "/alerts — List active alerts\n"
+    "/clearalerts — Remove all alerts\n\n"
+    "📰 Daily Summary\n"
+    "/summary 08:00 — Schedule daily recap (UTC)\n"
+    "/summaryoff — Disable daily recap\n\n"
+    "⚙️ Other\n"
+    "/clear — Reset conversation history\n"
+    "/start — Show main menu\n\n"
+    "You can also just chat — I'll answer gold market questions directly."
+)
+
+
+async def _core_analyze() -> str:
+    """Fetch data and generate the AI analysis text. Returns the reply string."""
     data = fetch_gold_data()
     if not data:
-        await update.message.reply_text("Could not fetch gold price data. Please try again later.")
-        return
+        return "Could not fetch gold price data. Please try again later."
 
     prompt = (
         f"Price: {data['price']}\n\n"
@@ -546,12 +657,17 @@ async def analyze_gold(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             ],
             max_tokens=300,
         )
-        reply = response.choices[0].message.content
+        return response.choices[0].message.content
     except Exception as e:
         logger.error("Groq API error: %s", e)
-        reply = "AI analysis failed. Please try again."
+        return "AI analysis failed. Please try again."
 
-    await update.message.reply_text(reply)
+
+async def analyze_gold(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    status = await update.message.reply_text("⏳ Fetching live XAUUSD data...")
+    reply = await _core_analyze()
+    await status.delete()
+    await update.message.reply_text(reply, reply_markup=_back_to_menu())
 
 
 async def gold_price(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -560,12 +676,19 @@ async def gold_price(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
         await update.message.reply_text("Could not fetch gold price. Please try again later.")
         return
     await update.message.reply_text(
-        f"XAUUSD\n"
-        f"Price: {data['price']}\n\n"
-        f"Support: {data['support']}\n"
-        f"Resistance: {data['resistance']}\n\n"
-        "Use /analyze for a full AI-powered signal.\n"
-        "Use /chart for a candlestick chart."
+        f"XAUUSD  —  Live Price\n\n"
+        f"💰 {data['price']}\n\n"
+        f"1H  Support: {data['h1_support']}  |  Resistance: {data['h1_resistance']}\n"
+        f"4H  Trend: {data['h4_trend']}\n"
+        f"Daily  Momentum: {data['d1_momentum']}\n"
+        f"Alignment: {data['alignment']}",
+        reply_markup=InlineKeyboardMarkup([
+            [
+                InlineKeyboardButton("📈 Full Analysis", callback_data="action_analyze"),
+                InlineKeyboardButton("📊 Chart",         callback_data="action_chart"),
+            ],
+            [InlineKeyboardButton("⬅️ Main Menu", callback_data="menu_main")],
+        ]),
     )
 
 
@@ -702,30 +825,205 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     conversation_history.pop(update.effective_chat.id, None)
     await update.message.reply_text(
-        f"Hello {user.first_name}! I'm your XAUUSD Gold Trading Assistant.\n\n"
-        "Commands:\n"
-        "/gold or /xauusd — live gold price\n"
-        "/analyze — full AI trading signal\n"
-        "/chart — 48h candlestick chart\n"
-        "/alert above 3250 — set a price alert\n"
-        "/alert below 3200 — set a price alert\n"
-        "/alerts — list active alerts\n"
-        "/clearalerts — remove all alerts\n"
-        "/summary 08:00 — set daily recap time (UTC)\n"
-        "/summaryoff — disable daily recap\n"
-        "/clear — reset conversation\n\n"
-        "Powered by live Yahoo Finance data + Groq AI."
+        f"Welcome back, {user.first_name}.\n\n"
+        "XAUUSD Gold AI Assistant\n"
+        "Live data  •  Multi-timeframe analysis  •  Price alerts\n\n"
+        "Tap a button below or type a question:",
+        reply_markup=_build_main_menu(),
     )
 
 
 async def clear(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     conversation_history.pop(update.effective_chat.id, None)
-    await update.message.reply_text("Conversation cleared.")
+    await update.message.reply_text("Conversation cleared.", reply_markup=_back_to_menu())
+
+
+async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    await query.answer()
+    data = query.data
+    chat_id = query.message.chat_id
+
+    # ── Navigation ────────────────────────────────────────────────────────────
+    if data == "menu_main":
+        await query.edit_message_text(
+            "XAUUSD Gold AI Assistant\n\nChoose an action:",
+            reply_markup=_build_main_menu(),
+        )
+
+    elif data == "menu_alerts":
+        user_alerts = alerts.get(chat_id, [])
+        count_line = f"{len(user_alerts)} active alert(s)" if user_alerts else "No active alerts"
+        await query.edit_message_text(
+            f"🔔 Alerts\n\n{count_line}\n\nSelect an action:",
+            reply_markup=_build_alerts_menu(),
+        )
+
+    elif data == "menu_summary":
+        sched = summary_schedules.get(chat_id)
+        sched_line = f"Scheduled: {sched} UTC" if sched else "No schedule set"
+        await query.edit_message_text(
+            f"📰 Daily Summary\n\n{sched_line}\n\nSelect an action:",
+            reply_markup=_build_summary_menu(chat_id),
+        )
+
+    elif data == "menu_settings":
+        await query.edit_message_text(
+            "⚙️ Settings\n\nCurrent configuration:",
+            reply_markup=_build_settings_menu(chat_id),
+        )
+
+    elif data == "action_summary_times":
+        await query.edit_message_text(
+            "📅 Choose a daily summary time (UTC):",
+            reply_markup=_build_summary_times_menu(),
+        )
+
+    # ── Actions — fast (no fetch) ─────────────────────────────────────────────
+    elif data == "action_help":
+        await query.edit_message_text(_HELP_TEXT, reply_markup=_back_to_menu())
+
+    elif data == "action_clear":
+        conversation_history.pop(chat_id, None)
+        await query.edit_message_text(
+            "Conversation history cleared.",
+            reply_markup=_back_to_menu(),
+        )
+
+    elif data == "action_alert_list":
+        user_alerts = alerts.get(chat_id, [])
+        if not user_alerts:
+            text = "You have no active alerts.\n\nUse the buttons below to set one."
+        else:
+            lines = ["Active XAUUSD Alerts:\n"]
+            for a in user_alerts:
+                arrow = "▲" if a["direction"] == "above" else "▼"
+                lines.append(f"{arrow} {a['direction'].capitalize()} {a['price']}  (ID #{a['id']})")
+            text = "\n".join(lines)
+        await query.edit_message_text(text, reply_markup=_build_alerts_menu())
+
+    elif data == "action_alert_clear":
+        count = len(alerts.pop(chat_id, []))
+        msg = f"Cleared {count} alert(s)." if count else "No active alerts to clear."
+        await query.edit_message_text(msg, reply_markup=_build_alerts_menu())
+
+    elif data == "action_alert_above":
+        context.user_data["awaiting_alert"] = "above"
+        await query.edit_message_text(
+            "▲ Alert Above\n\nReply with the price level, e.g.:\n3300\n\n"
+            "I'll notify you when XAUUSD crosses above that price.",
+            reply_markup=_back_to_menu(),
+        )
+
+    elif data == "action_alert_below":
+        context.user_data["awaiting_alert"] = "below"
+        await query.edit_message_text(
+            "▼ Alert Below\n\nReply with the price level, e.g.:\n3200\n\n"
+            "I'll notify you when XAUUSD drops below that price.",
+            reply_markup=_back_to_menu(),
+        )
+
+    elif data == "action_summary_off":
+        if chat_id in summary_schedules:
+            del summary_schedules[chat_id]
+            _summary_last_sent.pop(chat_id, None)
+            save_prefs()
+        await query.edit_message_text(
+            "Daily summary disabled.",
+            reply_markup=_build_summary_menu(chat_id),
+        )
+
+    elif data.startswith("action_summary_set_"):
+        time_str = data.replace("action_summary_set_", "")
+        summary_schedules[chat_id] = time_str
+        save_prefs()
+        await query.edit_message_text(
+            f"✅ Daily summary scheduled!\n\nI'll send a XAUUSD recap every day at {time_str} UTC.",
+            reply_markup=_build_summary_menu(chat_id),
+        )
+
+    # ── Actions — slow (fetch + AI) ───────────────────────────────────────────
+    elif data == "action_analyze":
+        await query.edit_message_text("⏳ Fetching live XAUUSD data…")
+        reply = await _core_analyze()
+        await query.message.reply_text(reply, reply_markup=_back_to_menu())
+
+    elif data == "action_chart":
+        await query.edit_message_text("⏳ Generating XAUUSD chart…")
+        buf, caption = await _core_chart()
+        if buf is None:
+            await query.message.reply_text(caption, reply_markup=_back_to_menu())
+        else:
+            await query.message.reply_photo(photo=buf, caption=caption, reply_markup=_back_to_menu())
+
+    elif data == "action_price":
+        await query.edit_message_text("⏳ Fetching live price…")
+        data_live = fetch_gold_data()
+        if not data_live:
+            await query.message.reply_text(
+                "Could not fetch price. Please try again.", reply_markup=_back_to_menu()
+            )
+        else:
+            await query.message.reply_text(
+                f"XAUUSD  —  Live Price\n\n"
+                f"💰 {data_live['price']}\n\n"
+                f"1H  Support: {data_live['h1_support']}  |  Resistance: {data_live['h1_resistance']}\n"
+                f"4H  Trend: {data_live['h4_trend']}\n"
+                f"Daily  Momentum: {data_live['d1_momentum']}\n"
+                f"Alignment: {data_live['alignment']}",
+                reply_markup=InlineKeyboardMarkup([
+                    [
+                        InlineKeyboardButton("📈 Full Analysis", callback_data="action_analyze"),
+                        InlineKeyboardButton("📊 Chart",         callback_data="action_chart"),
+                    ],
+                    [InlineKeyboardButton("⬅️ Main Menu", callback_data="menu_main")],
+                ]),
+            )
+
+    elif data == "action_summary_now":
+        await query.edit_message_text("⏳ Generating summary…")
+        data_live = fetch_gold_data()
+        if not data_live:
+            await query.message.reply_text(
+                "Could not fetch data. Please try again.", reply_markup=_back_to_menu()
+            )
+        else:
+            sched_time = summary_schedules.get(chat_id, "now")
+            msg = build_summary_message(data_live, sched_time)
+            await query.message.reply_text(msg, reply_markup=_back_to_menu())
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     text = update.message.text.lower().strip()
+    chat_id = update.effective_chat.id
 
+    # ── Awaiting alert price (set via inline button) ───────────────────────────
+    pending = context.user_data.get("awaiting_alert")
+    if pending in ("above", "below"):
+        raw = update.message.text.strip().replace(",", "")
+        try:
+            target_price = float(raw)
+        except ValueError:
+            await update.message.reply_text(
+                f"That doesn't look like a price. Please reply with a number, e.g. 3250",
+                reply_markup=_back_to_menu(),
+            )
+            return
+        context.user_data.pop("awaiting_alert")
+        alert_entry = {"id": _next_alert_id(), "direction": pending, "price": target_price}
+        alerts.setdefault(chat_id, []).append(alert_entry)
+        arrow = "▲" if pending == "above" else "▼"
+        await update.message.reply_text(
+            f"Alert set!\n\n{arrow} Notify me when XAUUSD goes {pending} {target_price}\n\n"
+            f"Checks every 60 seconds.",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🔔 Manage Alerts", callback_data="menu_alerts")],
+                [InlineKeyboardButton("⬅️ Main Menu", callback_data="menu_main")],
+            ]),
+        )
+        return
+
+    # ── Keyword shortcuts ──────────────────────────────────────────────────────
     if any(kw in text for kw in ["analyze gold", "analyse gold", "gold signal", "xauusd signal", "gold analysis"]):
         await analyze_gold(update, context)
         return
@@ -742,7 +1040,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await send_summary_now(update, context)
         return
 
-    chat_id = update.effective_chat.id
     if chat_id not in conversation_history:
         conversation_history[chat_id] = []
 
@@ -798,6 +1095,7 @@ def main() -> None:
     app.add_handler(CommandHandler("clearalerts", clear_alerts))
     app.add_handler(CommandHandler("summary", set_summary))
     app.add_handler(CommandHandler("summaryoff", summary_off))
+    app.add_handler(CallbackQueryHandler(button_callback))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     app.job_queue.run_repeating(check_alerts, interval=60, first=15)
